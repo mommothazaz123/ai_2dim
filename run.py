@@ -10,6 +10,7 @@ import math
 import random
 
 from inputs import get_gamepad, UnpluggedError, get_key
+from pynput import keyboard
 
 from lib.graphics import *
 
@@ -21,8 +22,24 @@ X_MAX = 500
 
 PROGRAM_SPEED = 1/20 # 20 tps
 
-CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
-CONTROL_FLIP = random.choice([True, False])
+DIFFICULTY = 3 # (1, 2, 3)
+
+ON_TARGET = 10 # px to be considered on target
+MAX_SPEED = 10 # px/tick
+
+if DIFFICULTY == 1:
+    CONTROL_MAP = [1, 1] # randomize i/o
+    CONTROL_FLIP = False
+    CONTROL_RANDOMIZATION = False
+elif DIFFICULTY == 2:
+    CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
+    CONTROL_FLIP = random.choice([True, False])
+    CONTROL_RANDOMIZATION = False
+else:
+    CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
+    CONTROL_FLIP = random.choice([True, False])
+    CONTROL_RANDOMIZATION = True
+
 
 class Program:
     def move_random(self, max_move_dist):
@@ -59,7 +76,7 @@ class Controller:
         self.robot = robot
         self.weights = [[0, 0], [0, 0]] # [[o1 on p1, o1 on p2], [o2 on p1, o2 on p2]]
         self.learned = [[0, 0], [0, 0]]
-        self.learn_rate = 0.005
+        self.learn_rate = 0.05
         self.last_output = None
     
     def get_delta(self, axis):
@@ -77,6 +94,14 @@ class Controller:
             if not hasWeight:
                 axis = a
                 break
+            
+        if hasWeight:
+            a = [self.weights[0][0] + self.weights[1][0], self.weights[0][1] + self.weights[1][1]]
+            for i, ax in enumerate(a):
+                if abs(ax) < 0.01:
+                    axis = i
+                    hasWeight = False
+                    break
                 
         if not hasWeight: # haven't moved yet. let's try something
             out = [0, 0]
@@ -106,13 +131,13 @@ class Controller:
                 self.weights[control][axis] = max(-lc, min(lc, self.weights[control][axis]))
         
     def output(self, x, y):
-        mo = 10
+        mo = MAX_SPEED
         x = min(mo, max(-mo, x))
         y = min(mo, max(-mo, y))
         self.last_output = (x, y)
         self.robot.move(x, y)
         
-class HumanController:
+class HumanGamepadController:
     def __init__(self, robot):
         self.robot = robot
         self.last_output = None
@@ -125,7 +150,38 @@ class HumanController:
         return math.sqrt((self.robot.getPos()[0] - p.target[0])**2 + (self.robot.getPos()[1] - p.target[1])**2)
     
     def move_robot(self):
-        events = get_gamepad()
+        events = get_gamepad() # TODO:
+        
+    def output(self, x, y):
+        mo = MAX_SPEED
+        x = min(mo, max(-mo, x))
+        y = min(mo, max(-mo, y))
+        self.last_output = (x, y)
+        self.robot.move(x, y)
+        
+class HumanKeyboardController:
+    def __init__(self, robot):
+        self.robot = robot
+        self.last_output = None
+        self.ox = {
+                   'a': -10,
+                   'd': 10
+                   }
+        self.oy = {
+                   'w': -10,
+                   's': 10
+                   }
+    
+    def get_delta(self, axis):
+        """Returns a tuple."""
+        return self.robot.getPos()[axis] - p.target[axis]
+    
+    def get_delta_total(self):
+        return math.sqrt((self.robot.getPos()[0] - p.target[0])**2 + (self.robot.getPos()[1] - p.target[1])**2)
+    
+    def move_robot(self):
+        k = p.win.checkKey()
+        self.output(self.ox.get(k, 0), self.oy.get(k, 0))
         
     def output(self, x, y):
         mo = 10
@@ -135,13 +191,7 @@ class HumanController:
         self.robot.move(x, y)
 
 def init():
-    try:
-        get_gamepad()
-    except UnpluggedError:
-        print("No gamepad detected, falling back to keyboard!")
-        p.human_input = get_key
-    else:
-        p.human_input = get_gamepad
+    pass
 
 def robot_init():
     p.win = GraphWin("2D Point ROBOT", X_MAX, Y_MAX, autoflush=False) #500x500 window
@@ -200,13 +250,19 @@ def update_graphs():
             li.draw(p.graphwin)
             p.datalines.append(li)
             
-def update_target():
-    if p.cont.get_delta_total() < 2:
+def robot_update_target():
+    if p.cont.get_delta_total() < ON_TARGET:
         a = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
         p.targets.append(a)
         p.tc.move(a.x - p.target[0], a.y - p.target[1])
         p.target = (a.x, a.y)
         p.robot_score += 1
+        if CONTROL_RANDOMIZATION:
+            global CONTROL_MAP
+            global CONTROL_FLIP
+            CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
+            CONTROL_FLIP = random.choice([True, False])
+            p.cont.weights = [[0, 0], [0, 0]] # [[o1 on p1, o1 on p2], [o2 on p1, o2 on p2]]
 
 def robot_loop(iteration):
     b = Point(p.robot.getPos()[0], p.robot.getPos()[1])
@@ -232,7 +288,7 @@ def robot_loop(iteration):
     
     #update_graphs()
     
-    update_target()
+    robot_update_target()
     
     time.sleep(PROGRAM_SPEED)
     try:
@@ -268,7 +324,12 @@ def human_init():
     p.target = (t.x, t.y)
     
     p.robot = Robot(p.robot_starting_point[0], p.robot_starting_point[1])
-    p.cont = HumanController(p.robot)
+    try:
+        get_gamepad()
+    except UnpluggedError:
+        p.cont = HumanKeyboardController(p.robot)
+    else:
+        p.cont = HumanGamepadController(p.robot)
     
     p.tc = Circle(t, 5) # put target somewhere random
     p.tc.draw(p.win)
@@ -276,6 +337,22 @@ def human_init():
     p.human_score = 0
     
     p.win.getMouse() # pause till click
+    
+def human_update_target():
+    if p.cont.get_delta_total() < ON_TARGET:
+        p.human_score += 1
+        try:
+            a = p.targets[p.human_score]
+        except: # whoa, the human is actually winning
+            a = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
+            p.targets.append(a)
+        p.tc.move(a.x - p.target[0], a.y - p.target[1])
+        p.target = (a.x, a.y)
+        if CONTROL_RANDOMIZATION:
+            global CONTROL_MAP
+            global CONTROL_FLIP
+            CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
+            CONTROL_FLIP = random.choice([True, False])
 
 def human_loop(iteration):
     b = Point(p.robot.getPos()[0], p.robot.getPos()[1])
@@ -283,7 +360,10 @@ def human_loop(iteration):
     p.human_deltas_x.append(p.cont.get_delta(0))
     p.human_deltas_y.append(p.cont.get_delta(1))
     
-    p.cont.move_robot()
+    try:
+        p.cont.move_robot()
+    except GraphicsError:
+        return False
         
     a = Point(p.robot.getPos()[0], p.robot.getPos()[1])
     p.human_outputs_x.append(a.x - b.x)
@@ -293,7 +373,7 @@ def human_loop(iteration):
     l.draw(p.win)
     
     
-    update_target()
+    human_update_target()
     
     time.sleep(PROGRAM_SPEED)
     try:
@@ -305,22 +385,44 @@ def human_loop(iteration):
 
 def output_data():
     t = datetime.today().isoformat()
-    with open('data/robot-movements-' + t + '.txt', mode='w') as f:
-        m = []
-        for po in p.robot_movements:
-            m.append([po.x, po.y])
-        f.write(json.dumps(m))
-    with open('data/robot-outdeltas-' + t + '.txt', mode='w') as f:
-        out = {}
-        out['outputs-x'] = p.robot_outputs_x
-        out['outputs-y'] = p.robot_outputs_y
-        out['deltas-x'] = p.robot_deltas_x
-        out['deltas-y'] = p.robot_deltas_y
-        f.write(json.dumps(out))
-    with open('data/human-movements-' + t + '.txt', mode='w') as f:
-        pass
-    with open('data/human-outdeltas-' + t + '.txt', mode='w') as f:
-        pass
+    all_data = {}
+    
+    m = []
+    for po in p.robot_movements:
+        m.append([po.x, po.y])
+        
+    all_data['robot-movements'] = m
+    
+    out = {}
+    out['outputs-x'] = p.robot_outputs_x
+    out['outputs-y'] = p.robot_outputs_y
+    out['deltas-x'] = p.robot_deltas_x
+    out['deltas-y'] = p.robot_deltas_y
+    
+    all_data['robot-outdeltas'] = out
+    
+    m = []
+    for po in p.human_movements:
+        m.append([po.x, po.y])
+        
+    all_data['human-movements'] = m
+    
+    out = {}
+    out['outputs-x'] = p.human_outputs_x
+    out['outputs-y'] = p.human_outputs_y
+    out['deltas-x'] = p.human_deltas_x
+    out['deltas-y'] = p.human_deltas_y
+    
+    all_data['human-outdeltas'] = out
+    
+    m = []
+    for po in p.targets:
+        m.append([po.x, po.y])
+        
+    all_data['targets'] = m
+    
+    with open('data/' + t + '.json', mode='w') as f:
+        json.dump(all_data, f)
     
 if __name__ == '__main__':
     init()
