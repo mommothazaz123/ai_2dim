@@ -4,10 +4,14 @@ Created on Jun 19, 2017
 @author: andrew
 '''
 
+from datetime import datetime
+import json
+import math
 import random
 
+from inputs import get_gamepad, UnpluggedError, get_key
+
 from lib.graphics import *
-import math
 
 
 Y_MIN = 0
@@ -16,6 +20,9 @@ X_MIN = 0
 X_MAX = 500
 
 PROGRAM_SPEED = 1/20 # 20 tps
+
+CONTROL_MAP = [random.choice([-1, 1]), random.choice([-1, 1])] # randomize i/o
+CONTROL_FLIP = random.choice([True, False])
 
 class Program:
     def move_random(self, max_move_dist):
@@ -39,10 +46,12 @@ class Robot(Circle):
         return (self.getCenter().x, self.getCenter().y)
     
     def move(self, dx, dy): # controller output
-        if self.reverse:
-            dx = -dx
-            dy = -dy
-        super().move(dx, dy)
+        dx = dx * CONTROL_MAP[0]
+        dy = dy * CONTROL_MAP[1]
+        if CONTROL_FLIP:
+            super().move(dy, dx)
+        else:
+            super().move(dx, dy)
         
 class Controller:
     """This object should take input from the Robot and minimise delta."""
@@ -50,11 +59,8 @@ class Controller:
         self.robot = robot
         self.weights = [[0, 0], [0, 0]] # [[o1 on p1, o1 on p2], [o2 on p1, o2 on p2]]
         self.learned = [[0, 0], [0, 0]]
-        self.learn_rate = 0.0005
-        self.old_learn = self.learn_rate
-        self.learn_rate_rate = 0.01
+        self.learn_rate = 0.005
         self.last_output = None
-        self.last_lr_output = 0
     
     def get_delta(self, axis):
         """Returns a tuple."""
@@ -88,7 +94,7 @@ class Controller:
         
     def learn(self, before, after):
         print(self.last_output)
-        lc = 5
+        lc = 1
         for axis in (0, 1):
             for control in (0, 1):
                 delta = abs(after[axis]) - abs(before[axis])
@@ -100,38 +106,67 @@ class Controller:
                 self.weights[control][axis] = max(-lc, min(lc, self.weights[control][axis]))
         
     def output(self, x, y):
-        x = min(10, max(-10, x))
-        y = min(10, max(-10, y))
+        mo = 10
+        x = min(mo, max(-mo, x))
+        y = min(mo, max(-mo, y))
         self.last_output = (x, y)
         self.robot.move(x, y)
         
-    def change_learn(self):
-        out = random.randint(-5, 5) * self.get_delta_total() / 100000
-        self.last_lr_output += out
-        self.learn_rate += out
-        self.learn_rate = max(0, min(0.5, self.learn_rate))
+class HumanController:
+    def __init__(self, robot):
+        self.robot = robot
+        self.last_output = None
+    
+    def get_delta(self, axis):
+        """Returns a tuple."""
+        return self.robot.getPos()[axis] - p.target[axis]
+    
+    def get_delta_total(self):
+        return math.sqrt((self.robot.getPos()[0] - p.target[0])**2 + (self.robot.getPos()[1] - p.target[1])**2)
+    
+    def move_robot(self):
+        events = get_gamepad()
         
-    def learn_to_learn(self, before, after):
-        delta = abs(after) - abs(before)
-        if delta == 0: delta += 0.01
-        self.learn_rate = (self.old_learn) + -self.learn_rate_rate * (self.last_lr_output * delta * (PROGRAM_SPEED*10))
-        self.learn_rate = max(0, min(0.5, self.learn_rate))
-        self.old_learn = self.learn_rate
-        self.last_lr_output = 0
+    def output(self, x, y):
+        mo = 10
+        x = min(mo, max(-mo, x))
+        y = min(mo, max(-mo, y))
+        self.last_output = (x, y)
+        self.robot.move(x, y)
 
 def init():
-    p.win = GraphWin("2D Point", X_MAX, Y_MAX, autoflush=False) #500x500 window
+    try:
+        get_gamepad()
+    except UnpluggedError:
+        print("No gamepad detected, falling back to keyboard!")
+        p.human_input = get_key
+    else:
+        p.human_input = get_gamepad
+
+def robot_init():
+    p.win = GraphWin("2D Point ROBOT", X_MAX, Y_MAX, autoflush=False) #500x500 window
     #p.graphwin = GraphWin("Data", 500, 500, autoflush=False)
+    
+    p.targets = []
+    p.robot_movements = []
+    p.robot_outputs_x = []
+    p.robot_outputs_y = []
+    p.robot_deltas_x = []
+    p.robot_deltas_y = []
+    
     t = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
     p.target = (t.x, t.y)
+    p.targets.append(t)
     
-    p.robot = Robot(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
+    p.robot_starting_point = (random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
+    p.robot = Robot(p.robot_starting_point[0], p.robot_starting_point[1])
     p.cont = Controller(p.robot)
     
     p.tc = Circle(t, 5) # put target somewhere random
     p.tc.draw(p.win)
     
-    p.score = 0
+    p.robot_score = 0
+    
     
     #zero = Line(Point(0, 250), Point(500, 250))
     #zero.draw(p.graphwin)
@@ -168,12 +203,16 @@ def update_graphs():
 def update_target():
     if p.cont.get_delta_total() < 2:
         a = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
+        p.targets.append(a)
         p.tc.move(a.x - p.target[0], a.y - p.target[1])
         p.target = (a.x, a.y)
-        p.score += 1
+        p.robot_score += 1
 
-def loop(iteration):
+def robot_loop(iteration):
     b = Point(p.robot.getPos()[0], p.robot.getPos()[1])
+    p.robot_movements.append(b) # append movement
+    p.robot_deltas_x.append(p.cont.get_delta(0))
+    p.robot_deltas_y.append(p.cont.get_delta(1))
     for control in (0, 1):
         before = (p.cont.get_delta(0), p.cont.get_delta(1))
         p.cont.move_robot(control)
@@ -182,16 +221,11 @@ def loop(iteration):
         after = (p.cont.get_delta(0), p.cont.get_delta(1))
         p.cont.learn(before, after)
     a = Point(p.robot.getPos()[0], p.robot.getPos()[1])
+    p.robot_outputs_x.append(a.x - b.x)
+    p.robot_outputs_y.append(a.y - b.y)
     l = Line(b, a)
+    l.setFill('yellow')
     l.draw(p.win)
-    
-    #print(p.cont.learn_rate)
-    #if iteration > 10:
-        #p.cont.change_learn()
-            
-        #if iteration % 200:
-            #p.cont.learn_to_learn(p.before_ten, p.cont.get_delta_total())
-            #p.before_ten = p.cont.get_delta_total()
     
     print(p.cont.weights)
     #print(p.cont.get_delta(0), p.cont.get_delta(1))
@@ -217,8 +251,94 @@ def loop(iteration):
         return False
     return iteration < 60*20 # 1 min
 
+def reset():
+    pass
+
+def human_init():
+    p.win = GraphWin("2D Point HUMAN", X_MAX, Y_MAX, autoflush=False) #500x500 window
+    #p.graphwin = GraphWin("Data", 500, 500, autoflush=False)
+    
+    p.human_movements = []
+    p.human_outputs_x = []
+    p.human_outputs_y = []
+    p.human_deltas_x = []
+    p.human_deltas_y = []
+    
+    t = p.targets[0]
+    p.target = (t.x, t.y)
+    
+    p.robot = Robot(p.robot_starting_point[0], p.robot_starting_point[1])
+    p.cont = HumanController(p.robot)
+    
+    p.tc = Circle(t, 5) # put target somewhere random
+    p.tc.draw(p.win)
+    
+    p.human_score = 0
+    
+    p.win.getMouse() # pause till click
+
+def human_loop(iteration):
+    b = Point(p.robot.getPos()[0], p.robot.getPos()[1])
+    p.human_movements.append(b) # append movement
+    p.human_deltas_x.append(p.cont.get_delta(0))
+    p.human_deltas_y.append(p.cont.get_delta(1))
+    
+    p.cont.move_robot()
+        
+    a = Point(p.robot.getPos()[0], p.robot.getPos()[1])
+    p.human_outputs_x.append(a.x - b.x)
+    p.human_outputs_y.append(a.y - b.y)
+    l = Line(b, a)
+    l.setFill('yellow')
+    l.draw(p.win)
+    
+    
+    update_target()
+    
+    time.sleep(PROGRAM_SPEED)
+    try:
+        a = p.win.checkMouse()
+        update()
+    except GraphicsError:
+        return False
+    return iteration < 60*20 # 1 min
+
+def output_data():
+    t = datetime.today().isoformat()
+    with open('data/robot-movements-' + t + '.txt', mode='w') as f:
+        m = []
+        for po in p.robot_movements:
+            m.append([po.x, po.y])
+        f.write(json.dumps(m))
+    with open('data/robot-outdeltas-' + t + '.txt', mode='w') as f:
+        out = {}
+        out['outputs-x'] = p.robot_outputs_x
+        out['outputs-y'] = p.robot_outputs_y
+        out['deltas-x'] = p.robot_deltas_x
+        out['deltas-y'] = p.robot_deltas_y
+        f.write(json.dumps(out))
+    with open('data/human-movements-' + t + '.txt', mode='w') as f:
+        pass
+    with open('data/human-outdeltas-' + t + '.txt', mode='w') as f:
+        pass
+    
 if __name__ == '__main__':
     init()
+    
+    robot_init()
     iteration = 0
-    while loop(iteration):
+    while robot_loop(iteration):
         iteration += 1
+    
+    reset()
+        
+    human_init()
+    iteration = 0
+    while human_loop(iteration):
+        iteration += 1
+        
+    print("Robot score: " + str(p.robot_score))
+    print("Human score: " + str(p.human_score))
+    output_data()
+    print("Data can be found in /data.")
+        
