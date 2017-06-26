@@ -434,7 +434,7 @@ def output_data():
     
     all_data['difficulty'] = DIFFICULTY
     
-    with open('data/' + t + '.json', mode='w') as f:
+    with open('data/' + t + '.json', mode='w+') as f:
         json.dump(all_data, f)
     
 if __name__ == '__main__':
