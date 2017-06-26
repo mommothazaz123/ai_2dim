@@ -10,7 +10,6 @@ import math
 import random
 
 from inputs import get_gamepad, UnpluggedError, get_key
-from pynput import keyboard
 
 from lib.graphics import *
 
