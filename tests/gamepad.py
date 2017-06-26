@@ -15,7 +15,7 @@ def main():
     """Just print out some event infomation when the gamepad is used."""
     iteration = 0
     while 1:
-        events = list(iter(devices.gamepads[0]))
+        events = iter(devices.gamepads[0])
         for event in events:
             print(event.ev_type, event.code, event.state)
         iteration += 1
