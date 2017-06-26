@@ -15,8 +15,10 @@ def main():
     """Just print out some event infomation when the gamepad is used."""
     while 1:
         events = get_gamepad()
-        for event in events:
-            print(event.ev_type, event.code, event.state)
+        while events:
+            for event in events:
+                print(event.ev_type, event.code, event.state)
+            events = get_gamepad()
         time.sleep(1)
 
 
