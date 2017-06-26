@@ -2015,6 +2015,7 @@ class InputDevice(object):
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
+        self.l = None
 
     def _get_path_infomation(self):
         """Get useful infomation from the device path."""
@@ -2060,9 +2061,10 @@ class InputDevice(object):
         while True:
             event = self._do_iter()
             if event:
+                self.l = event
                 yield event
             else:
-                yield False
+                yield self.l
 
     def _get_data(self, read_size):
         """Get data from the character device."""

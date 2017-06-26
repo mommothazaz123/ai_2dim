@@ -9,9 +9,8 @@ import json
 import math
 import random
 
-from inputs import get_gamepad, UnpluggedError, get_key, devices
-
 from lib.graphics import *
+from lib.inputs import get_gamepad, UnpluggedError, get_key, devices
 
 
 Y_MIN = 0
