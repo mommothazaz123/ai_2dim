@@ -434,6 +434,9 @@ def output_data():
     
     all_data['difficulty'] = DIFFICULTY
     
+    if not os.path.exists('data/'):
+        os.makedirs('data/')
+    
     with open('data/' + t + '.json', mode='w+') as f:
         json.dump(all_data, f)
     
