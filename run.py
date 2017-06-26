@@ -141,6 +141,8 @@ class HumanGamepadController:
     def __init__(self, robot):
         self.robot = robot
         self.last_output = None
+        self.x = 0
+        self.y = 0
     
     def get_delta(self, axis):
         """Returns a tuple."""
@@ -150,7 +152,15 @@ class HumanGamepadController:
         return math.sqrt((self.robot.getPos()[0] - p.target[0])**2 + (self.robot.getPos()[1] - p.target[1])**2)
     
     def move_robot(self):
-        events = get_gamepad() # TODO:
+        events = get_gamepad()
+        for event in events:
+            if event.ev_type == "Absolute":
+                if event.code == "ABS_X":
+                    self.x = int(event.state) / 32768
+                if event.code == "ABS_Y":
+                    self.y = int(event.state) / 32768
+
+        self.output(self.x, self.y)
         
     def output(self, x, y):
         mo = MAX_SPEED
