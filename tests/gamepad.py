@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import time
 
-from inputs import get_gamepad, devices
+from lib.inputs import get_gamepad, devices
 
 
 def main():
@@ -16,8 +16,11 @@ def main():
     iteration = 0
     while 1:
         events = iter(devices.gamepads[0])
-        for event in events:
-            print(event.ev_type, event.code, event.state)
+        e = next(events)
+        while e:
+            for event in e:
+                print(event.ev_type, event.code, event.state)
+            e = next(events)
         iteration += 1
         print(iteration)
 
