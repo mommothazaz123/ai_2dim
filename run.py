@@ -162,7 +162,7 @@ class HumanGamepadController:
                     self.y = int(event.state) / 32768
         
         print(self.x, self.y)
-        self.output(self.x, self.y)
+        self.output(self.x * 10, self.y * 10)
         
     def output(self, x, y):
         mo = MAX_SPEED
