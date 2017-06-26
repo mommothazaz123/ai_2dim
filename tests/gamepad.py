@@ -29,10 +29,14 @@ def main():
 def main2():
     """Just print out some event infomation when the gamepad is used."""
     devices.gamepads[0].read_size = 5
+    iteration = 0
     while 1:
         events = get_gamepad()
         for event in events:
             print(event.ev_type, event.code, event.state)
+        time.sleep(1)
+        iteration += 1
+        print(iteration)
 
 
 if __name__ == "__main__":
