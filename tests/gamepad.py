@@ -18,6 +18,7 @@ def main():
         events = iter(devices.gamepads[0])
         e = next(events)
         while e:
+            print(e)
             for event in e:
                 print(event.ev_type, event.code, event.state)
             e = next(events)
