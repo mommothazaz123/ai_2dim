@@ -17,7 +17,7 @@ def main():
         events = get_gamepad()
         for event in events:
             print(event.ev_type, event.code, event.state)
-        time.sleep(1/20)
+        time.sleep(1)
 
 
 if __name__ == "__main__":
