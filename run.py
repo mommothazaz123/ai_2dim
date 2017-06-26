@@ -160,7 +160,8 @@ class HumanGamepadController:
                     self.x = int(event.state) / 32768
                 if event.code == "ABS_Y":
                     self.y = int(event.state) / 32768
-
+        
+        print(self.x, self.y)
         self.output(self.x, self.y)
         
     def output(self, x, y):
