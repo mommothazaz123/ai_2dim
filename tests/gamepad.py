@@ -14,6 +14,7 @@ from lib.inputs import get_gamepad, devices
 def main():
     """Just print out some event infomation when the gamepad is used."""
     iteration = 0
+    devices.gamepads[0].read_size = 5
     while 1:
         events = iter(devices.gamepads[0])
         e = next(events)
@@ -24,7 +25,15 @@ def main():
             e = next(events)
         iteration += 1
         print(iteration)
+        
+def main2():
+    """Just print out some event infomation when the gamepad is used."""
+    devices.gamepads[0].read_size = 5
+    while 1:
+        events = get_gamepad()
+        for event in events:
+            print(event.ev_type, event.code, event.state)
 
 
 if __name__ == "__main__":
-    main()
+    main2()

@@ -2062,7 +2062,7 @@ class InputDevice(object):
             if event:
                 yield event
             else:
-                yield False
+                yield None
 
     def _get_data(self, read_size):
         """Get data from the character device."""
