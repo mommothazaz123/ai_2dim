@@ -433,6 +433,8 @@ def output_data():
         
     all_data['targets'] = m
     
+    all_data['difficulty'] = DIFFICULTY
+    
     with open('data/' + t + '.json', mode='w') as f:
         json.dump(all_data, f)
     
