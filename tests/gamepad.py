@@ -8,20 +8,16 @@ from __future__ import print_function
 
 import time
 
-from inputs import get_gamepad
+from inputs import get_gamepad, devices
 
 
 def main():
     """Just print out some event infomation when the gamepad is used."""
     iteration = 0
     while 1:
-        events = get_gamepad()
-        while events:
-            print(len(events))
-            for event in events:
-                print(event.ev_type, event.code, event.state)
-            events = get_gamepad()
-        time.sleep(1)
+        events = list(iter(devices.gamepads[0]))
+        for event in events:
+            print(event.ev_type, event.code, event.state)
         iteration += 1
         print(iteration)
 
