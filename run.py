@@ -22,7 +22,9 @@ X_MAX = 500
 
 PROGRAM_SPEED = 1/20 # 20 tps
 
-DIFFICULTY = 3 # (1, 2, 3)
+DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
+while not DIFFICULTY in (1, 2, 3):
+    DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
 
 ON_TARGET = 10 # px to be considered on target
 MAX_SPEED = 10 # px/tick
