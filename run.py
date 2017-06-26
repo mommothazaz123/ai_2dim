@@ -143,7 +143,7 @@ class HumanGamepadController:
         self.last_output = None
         self.x = 0
         self.y = 0
-        devices.gamepads[0].read_size = 20
+        devices.gamepads[0].read_size = 10
     
     def get_delta(self, axis):
         """Returns a tuple."""
