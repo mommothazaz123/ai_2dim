@@ -5,6 +5,10 @@
 First, clone the repo into a folder of your choice and install the requirements with `pip install -r requirements.txt`.  
 Then, simply plug in a gamepad (Xbox controller works best), and run `python run.py`.  
 
+### Requirements  
+- Python 3.4+  
+- A gamepad (Xbox controller works best)  
+
 ## What the program's doing
 
 First, a window labelled `2D Point ROBOT` will appear. This is the machine learning step of the program.  
