@@ -7,7 +7,10 @@ Then, simply plug in a gamepad (Xbox controller works best), and run `python run
 
 ### Requirements  
 - Python 3.4+  
-- A gamepad (Xbox controller works best)  
+- A gamepad (Xbox controller works best) 
+
+### Compatability  
+Windows and Linux support.  
 
 ## What the program's doing
 
