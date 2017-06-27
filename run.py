@@ -11,6 +11,7 @@ import random
 
 from lib.graphics import *
 from lib.inputs import get_gamepad, UnpluggedError, get_key, devices
+import threading
 
 
 Y_MIN = 0
@@ -136,14 +137,25 @@ class Controller:
         y = min(mo, max(-mo, y))
         self.last_output = (x, y)
         self.robot.move(x, y)
-        
+
+def listen(c):
+    events = get_gamepad()
+    for event in events:
+        if event.ev_type == "Absolute":
+            if event.code == "ABS_X":
+                c.x = int(event.state) / 32768
+            if event.code == "ABS_Y":
+                c.y = int(event.state) / 32768
+
 class HumanGamepadController:
     def __init__(self, robot):
         self.robot = robot
         self.last_output = None
         self.x = 0
         self.y = 0
-        devices.gamepads[0].read_size = 10
+        self.lt = threading.Thread(target=listen, args=(self,))
+        self.lt.setDaemon(True)
+        self.lt.start()
     
     def get_delta(self, axis):
         """Returns a tuple."""
@@ -153,15 +165,6 @@ class HumanGamepadController:
         return math.sqrt((self.robot.getPos()[0] - p.target[0])**2 + (self.robot.getPos()[1] - p.target[1])**2)
     
     def move_robot(self):
-        events = get_gamepad()
-        for event in events:
-            if event.ev_type == "Absolute":
-                if event.code == "ABS_X":
-                    self.x = int(event.state) / 32768
-                if event.code == "ABS_Y":
-                    self.y = int(event.state) / 32768
-        
-        print(self.x, self.y)
         self.output(self.x * 10, self.y * 10)
         
     def output(self, x, y):
