@@ -8,10 +8,10 @@ from datetime import datetime
 import json
 import math
 import random
+import threading
 
 from lib.graphics import *
 from lib.inputs import get_gamepad, UnpluggedError, get_key, devices
-import threading
 
 
 Y_MIN = 0
@@ -25,8 +25,11 @@ DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
 while not DIFFICULTY in (1, 2, 3):
     DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
 
-ON_TARGET = 10 # px to be considered on target
-MAX_SPEED = 10 # px/tick
+ON_TARGET = 0.1 # px to be considered on target, default 10
+MAX_SPEED = 100 # px/tick
+
+LEARN_RATE = 1
+MAX_WEIGHT = 0.1 # 0.5 = slow, 1 = stable, 1-2 = oscillating, 2+ = unstable
 
 if DIFFICULTY == 1:
     CONTROL_MAP = [1, 1] # randomize i/o
@@ -77,7 +80,7 @@ class Controller:
         self.robot = robot
         self.weights = [[0, 0], [0, 0]] # [[o1 on p1, o1 on p2], [o2 on p1, o2 on p2]]
         self.learned = [[0, 0], [0, 0]]
-        self.learn_rate = 0.05
+        self.learn_rate = LEARN_RATE
         self.last_output = None
     
     def get_delta(self, axis):
@@ -120,7 +123,7 @@ class Controller:
         
     def learn(self, before, after):
         print(self.last_output)
-        lc = 1
+        lc = MAX_WEIGHT
         for axis in (0, 1):
             for control in (0, 1):
                 delta = abs(after[axis]) - abs(before[axis])
@@ -403,7 +406,7 @@ def human_loop(iteration):
         return False
     return iteration < 60*20 # 1 min
 
-def output_data():
+def output_data(include_human=True):
     t = datetime.today().isoformat()
     all_data = {}
     
@@ -422,24 +425,25 @@ def output_data():
     all_data['robot-outdeltas'] = out
     all_data['robot-targetticks'] = p.robot_targetticks
     
-    m = []
-    for po in p.human_movements:
-        m.append([po.x, po.y])
+    if include_human:
+        m = []
+        for po in p.human_movements:
+            m.append([po.x, po.y])
+            
+        all_data['human-movements'] = m
         
-    all_data['human-movements'] = m
-    
-    out = {}
-    out['outputs-x'] = p.human_outputs_x
-    out['outputs-y'] = p.human_outputs_y
-    out['deltas-x'] = p.human_deltas_x
-    out['deltas-y'] = p.human_deltas_y
-    
-    all_data['human-outdeltas'] = out
-    all_data['human-targetticks'] = p.human_targetticks
-    
-    m = []
-    for po in p.targets:
-        m.append([po.x, po.y])
+        out = {}
+        out['outputs-x'] = p.human_outputs_x
+        out['outputs-y'] = p.human_outputs_y
+        out['deltas-x'] = p.human_deltas_x
+        out['deltas-y'] = p.human_deltas_y
+        
+        all_data['human-outdeltas'] = out
+        all_data['human-targetticks'] = p.human_targetticks
+        
+        m = []
+        for po in p.targets:
+            m.append([po.x, po.y])
         
     all_data['targets'] = m
     
@@ -450,7 +454,9 @@ def output_data():
     
     time.sleep(1)
     
-    with open('data/' + t.replace(':', '-') + '.json', mode='w+') as f:
+    name = t.replace(':', '-') + 'd' + str(DIFFICULTY) + ('robot' if not include_human else "")
+    
+    with open('data/' + name + '.json', mode='w+') as f:
         json.dump(all_data, f)
     
 if __name__ == '__main__':
@@ -460,18 +466,20 @@ if __name__ == '__main__':
     iteration = 0
     while robot_loop(iteration):
         iteration += 1
-    
-    reset()
-        
-    human_init()
-    iteration = 0
-    while human_loop(iteration):
-        iteration += 1
-        
-    print("Robot score: " + str(p.robot_score))
-    print("Human score: " + str(p.human_score))
-    output_data()
-    print("Data can be found in /data.")
-    print("Please email the data to machinelearning@avrae.io!")
-    print("You can review your run by running python3 review.py")
+    if not 'nohuman' in sys.argv:
+        reset()
+            
+        human_init()
+        iteration = 0
+        while human_loop(iteration):
+            iteration += 1
+            
+        print("Robot score: " + str(p.robot_score))
+        print("Human score: " + str(p.human_score))
+        output_data()
+        print("Data can be found in /data.")
+        print("Please email the data to machinelearning@avrae.io!")
+        print("You can review your run by running python3 review.py")
+    else:
+        output_data(False)
         

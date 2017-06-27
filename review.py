@@ -5,6 +5,7 @@ Created on Jun 23, 2017
 '''
 import glob
 import json
+import sys
 import time
 
 from lib.graphics import GraphWin, Point, Line, Circle, Text
@@ -113,15 +114,16 @@ if __name__ == '__main__':
     p.win.getMouse()
     
     draw_robot_path()
-    draw_human_path()
-    
-    p.win.getMouse()
-    
-    clear()
-    
-    draw_targets()
-    
-    step_thru_path()
+    if not 'nohuman' in sys.argv:
+        draw_human_path()
+        
+        p.win.getMouse()
+        
+        clear()
+        
+        draw_targets()
+        
+        step_thru_path()
     
     
     
