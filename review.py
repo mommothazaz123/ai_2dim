@@ -31,12 +31,14 @@ def select_file():
     
 def initialize_window():
     p.win = GraphWin("Data Review", 500, 500)
+    p.i = []
     
 def draw_targets():
     points = [Point(_[0], _[1]) for _ in p.data['targets']]
     for i, po in enumerate(points):
         t = Text(po, str(i))
         t.draw(p.win)
+        p.i.append(t)
     
 def draw_robot_path():
     points = [Point(_[0], _[1]) for _ in p.data['robot-movements']]
@@ -44,6 +46,7 @@ def draw_robot_path():
         l = Line(po, points[i+1])
         l.setFill(COLORS['robot_path'])
         l.draw(p.win)
+        p.i.append(l)
 
 def draw_human_path():
     points = [Point(_[0], _[1]) for _ in p.data['human-movements']]
@@ -51,9 +54,10 @@ def draw_human_path():
         l = Line(po, points[i+1])
         l.setFill(COLORS['human_path'])
         l.draw(p.win)
+        p.i.append(l)
         
 def clear():
-    for i in p.win.items:
+    for i in p.i:
         i.undraw()
 
 def step_thru_path():
