@@ -22,7 +22,7 @@ COLORS = {
 def select_file():
     files = glob.glob('data/*.json')
     out = ""
-    for i, file in enumerate(files):
+    for i, file in enumerate(sorted(files)):
         out += "[{}]: {}\n".format(i, file)
     print(out)
     selected_file = int(input("Input file number: "))
@@ -51,6 +51,46 @@ def draw_human_path():
         l = Line(po, points[i+1])
         l.setFill(COLORS['human_path'])
         l.draw(p.win)
+        
+def clear():
+    for i in p.win.items:
+        i.undraw()
+
+def step_thru_path():
+    rpoints = [Point(_[0], _[1]) for _ in p.data['robot-movements']]
+    hpoints = [Point(_[0], _[1]) for _ in p.data['human-movements']]
+    rtts = p.data['robot-targetticks']
+    htts = p.data['human-targetticks']
+    index = 0
+    robot_next = 0
+    human_next = 0
+    while index < max(len(htts), len(rtts)):
+        p.win.getMouse()
+        try:
+            robot_last = robot_next
+            robot_next = rtts[index]
+        except IndexError:
+            robot_next = None
+        
+        try:
+            human_last = human_next
+            human_next = htts[index]
+        except IndexError:
+            human_next = None
+        
+        if robot_next is not None:
+            rpts = rpoints[robot_last:robot_next]
+            for i, po in enumerate(rpts[:-2]):
+                l = Line(po, rpts[i+1])
+                l.setFill(COLORS['robot_path'])
+                l.draw(p.win)
+        if human_next is not None:
+            hpts = hpoints[human_last:human_next]
+            for i, po in enumerate(hpts[:-2]):
+                l = Line(po, hpts[i+1])
+                l.setFill(COLORS['human_path'])
+                l.draw(p.win)
+        index += 1
 
 if __name__ == '__main__':
     p.data = select_file()
@@ -64,3 +104,14 @@ if __name__ == '__main__':
     draw_human_path()
     
     p.win.getMouse()
+    
+    clear()
+    
+    draw_targets()
+    
+    step_thru_path()
+    
+    
+    
+    
+    

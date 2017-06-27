@@ -219,6 +219,7 @@ def robot_init():
     p.robot_outputs_y = []
     p.robot_deltas_x = []
     p.robot_deltas_y = []
+    p.robot_targetticks = []
     
     t = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
     p.target = (t.x, t.y)
@@ -266,8 +267,9 @@ def update_graphs():
             li.draw(p.graphwin)
             p.datalines.append(li)
             
-def robot_update_target():
+def robot_update_target(iteration):
     if p.cont.get_delta_total() < ON_TARGET:
+        p.robot_targetticks.append(iteration)
         a = Point(random.randint(X_MIN, X_MAX), random.randint(Y_MIN, Y_MAX))
         p.targets.append(a)
         p.tc.move(a.x - p.target[0], a.y - p.target[1])
@@ -304,7 +306,7 @@ def robot_loop(iteration):
     
     #update_graphs()
     
-    robot_update_target()
+    robot_update_target(iteration)
     
     time.sleep(PROGRAM_SPEED)
     try:
@@ -335,6 +337,7 @@ def human_init():
     p.human_outputs_y = []
     p.human_deltas_x = []
     p.human_deltas_y = []
+    p.human_targetticks = []
     
     t = p.targets[0]
     p.target = (t.x, t.y)
@@ -354,9 +357,10 @@ def human_init():
     
     p.win.getMouse() # pause till click
     
-def human_update_target():
+def human_update_target(iteration):
     if p.cont.get_delta_total() < ON_TARGET:
         p.human_score += 1
+        p.human_targetticks.append(iteration)
         try:
             a = p.targets[p.human_score]
         except: # whoa, the human is actually winning
@@ -389,7 +393,7 @@ def human_loop(iteration):
     l.draw(p.win)
     
     
-    human_update_target()
+    human_update_target(iteration)
     
     time.sleep(PROGRAM_SPEED)
     try:
@@ -416,6 +420,7 @@ def output_data():
     out['deltas-y'] = p.robot_deltas_y
     
     all_data['robot-outdeltas'] = out
+    all_data['robot-targetticks'] = p.robot_targetticks
     
     m = []
     for po in p.human_movements:
@@ -430,6 +435,7 @@ def output_data():
     out['deltas-y'] = p.human_deltas_y
     
     all_data['human-outdeltas'] = out
+    all_data['human-targetticks'] = p.human_targetticks
     
     m = []
     for po in p.targets:
