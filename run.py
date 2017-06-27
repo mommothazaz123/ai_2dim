@@ -448,7 +448,9 @@ def output_data():
     if not os.path.exists('data/'):
         os.makedirs('data/')
     
-    with open('data/' + t + '.json', mode='w+') as f:
+    time.sleep(1)
+    
+    with open('data/' + t.replace(':', '-') + '.json', mode='w+') as f:
         json.dump(all_data, f)
     
 if __name__ == '__main__':
