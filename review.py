@@ -32,6 +32,7 @@ def select_file():
 def initialize_window():
     p.win = GraphWin("Data Review", 500, 500)
     p.i = []
+    p.i2 = []
     
 def draw_targets():
     points = [Point(_[0], _[1]) for _ in p.data['targets']]
@@ -70,6 +71,8 @@ def step_thru_path():
     human_next = 0
     while index < max(len(htts), len(rtts)):
         p.win.getMouse()
+        for i in p.i2:
+            i.undraw()
         try:
             robot_last = robot_next
             robot_next = rtts[index]
@@ -88,12 +91,14 @@ def step_thru_path():
                 l = Line(po, rpts[i+1])
                 l.setFill(COLORS['robot_path'])
                 l.draw(p.win)
+                p.i2.append(l)
         if human_next is not None:
             hpts = hpoints[human_last:human_next]
             for i, po in enumerate(hpts[:-2]):
                 l = Line(po, hpts[i+1])
                 l.setFill(COLORS['human_path'])
                 l.draw(p.win)
+                p.i2.append(l)
         index += 1
 
 if __name__ == '__main__':
