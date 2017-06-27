@@ -139,13 +139,14 @@ class Controller:
         self.robot.move(x, y)
 
 def listen(c):
-    events = get_gamepad()
-    for event in events:
-        if event.ev_type == "Absolute":
-            if event.code == "ABS_X":
-                c.x = int(event.state) / 32768
-            if event.code == "ABS_Y":
-                c.y = int(event.state) / 32768
+    while True:
+        events = get_gamepad()
+        for event in events:
+            if event.ev_type == "Absolute":
+                if event.code == "ABS_X":
+                    c.x = int(event.state) / 32768
+                if event.code == "ABS_Y":
+                    c.y = int(event.state) / 32768
 
 class HumanGamepadController:
     def __init__(self, robot):
