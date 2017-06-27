@@ -5,6 +5,7 @@ Created on Jun 23, 2017
 '''
 import glob
 import json
+import time
 
 from lib.graphics import GraphWin, Point, Line, Circle, Text
 
@@ -92,6 +93,7 @@ def step_thru_path():
                 l.setFill(COLORS['robot_path'])
                 l.draw(p.win)
                 p.i2.append(l)
+                time.sleep(1/20)
         if human_next is not None:
             hpts = hpoints[human_last:human_next]
             for i, po in enumerate(hpts[:-2]):
@@ -99,6 +101,7 @@ def step_thru_path():
                 l.setFill(COLORS['human_path'])
                 l.draw(p.win)
                 p.i2.append(l)
+                time.sleep(1/20)
         index += 1
 
 if __name__ == '__main__':

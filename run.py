@@ -470,4 +470,6 @@ if __name__ == '__main__':
     print("Human score: " + str(p.human_score))
     output_data()
     print("Data can be found in /data.")
+    print("Please email the data to machinelearning@avrae.io!")
+    print("You can review your run by running python3 review.py")
         
