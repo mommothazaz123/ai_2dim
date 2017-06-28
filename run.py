@@ -25,11 +25,11 @@ DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
 while not DIFFICULTY in (1, 2, 3):
     DIFFICULTY = int(input("Difficulty? (1, 2, or 3): ")) # (1, 2, 3)
 
-ON_TARGET = 0.1 # px to be considered on target, default 10
-MAX_SPEED = 100 # px/tick
+ON_TARGET = 10 # px to be considered on target, default 10
+MAX_SPEED = 10 # px/tick
 
-LEARN_RATE = 1
-MAX_WEIGHT = 0.1 # 0.5 = slow, 1 = stable, 1-2 = oscillating, 2+ = unstable
+LEARN_RATE = 0.05
+MAX_WEIGHT = 1 # 0.5 = slow, 1 = stable, 1-2 = oscillating, 2+ = unstable
 
 if DIFFICULTY == 1:
     CONTROL_MAP = [1, 1] # randomize i/o
